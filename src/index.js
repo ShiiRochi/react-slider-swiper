@@ -18,6 +18,8 @@ export default class ReactIdSwiper extends React.Component {
       PropTypes.element
     ]),
     rebuildOnUpdate: PropTypes.bool,
+    shouldSwiperUpdate: PropTypes.bool,
+    activeSlideKey: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     initialSlide: PropTypes.number,
     direction: PropTypes.string,
     speed: PropTypes.number,
@@ -178,14 +180,7 @@ export default class ReactIdSwiper extends React.Component {
 
   componentDidMount() {
     this.SwiperMain = require('swiper');
-    this.swiper = this.SwiperMain(ReactDOM.findDOMNode(this), objectAssign({}, this.props));
-  }
-
-  componentWillReceiveProps(nextProps) {
-    if (this.props.rebuildOnUpdate && typeof this.swiper !== 'undefined') {
-      this.swiper.destroy(true, true);
-      this.swiper = this.SwiperMain(ReactDOM.findDOMNode(this), objectAssign({}, nextProps));
-    }
+    this.buildSwiper();
   }
 
   shouldComponentUpdate(nextProps) {
@@ -193,15 +188,53 @@ export default class ReactIdSwiper extends React.Component {
   }
 
   componentDidUpdate() {
-    if (this.props.rebuildOnUpdate && typeof this.swiper !== 'undefined') {
-      this.swiper.destroy(true, true);
-      this.swiper = this.SwiperMain(ReactDOM.findDOMNode(this), objectAssign({}, this.props));
+    const { rebuildOnUpdate, shouldSwiperUpdate, activeSlideKey } = this.props;
+    if (typeof this.swiper !== 'undefined') {
+      if (rebuildOnUpdate) {
+        this.rebuildSwiper();
+      } else if (shouldSwiperUpdate) {
+        this.updateSwiper();
+
+        const numSlides = this.swiper.slides.length;
+        if (numSlides <= this.swiper.activeIndex) {
+          const index = Math.max(numSlides - 1, 0);
+          this.swiper.slideTo(index);
+        }
+      }
+      if (activeSlideKey) {
+        let activeSlideId = null;
+        let id = 0;
+        React.Children.forEach(this.props.children, (child) => {
+          if (child) {
+            if (child.key === activeSlideKey) {
+              activeSlideId = id;
+            }
+            id += 1;
+          }
+        });
+        if (activeSlideId !== null) {
+          this.swiper.slideTo(activeSlideId);
+        }
+      }
     }
   }
 
   componentWillUnmount() {
     if (typeof this.swiper !== 'undefined') this.swiper.destroy(true, true);
     delete this.swiper;
+  }
+
+  buildSwiper() {
+    this.swiper = this.SwiperMain(ReactDOM.findDOMNode(this), objectAssign({}, this.props));
+  }
+
+  rebuildSwiper() {
+    this.swiper.destroy(true, true);
+    this.buildSwiper();
+  }
+
+  updateSwiper() {
+    if (typeof this.swiper !== 'undefined') this.swiper.update();
   }
 
   validateClass(className) {
@@ -261,6 +294,6 @@ export default class ReactIdSwiper extends React.Component {
         {this.renderNextButton()}
         {this.renderPrevButton()}
       </div>
-    )
+    );
   }
 }
