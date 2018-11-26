@@ -1,7 +1,26 @@
+/*
+  NOTE: Custom version won't support those features below
+  - Virtual
+  - Keyboard
+  - Mouse wheel
+  - Zoom
+  - Lazy load image
+  - A11y
+  - Parallax
+  - History
+  - Hash-navigation
+  - Effect-cube
+  - Effect-flip
+  - Effect-coverflow
+
+  #Referer link: http://idangero.us/swiper/api/#custom-build
+*/
+
 import React, { Component } from 'react';
 import ReactDOM from 'react-dom';
 import objectAssign from 'object-assign';
 import PropTypes from 'prop-types';
+import Swiper from './swiper/custom';
 import { cn } from './utils';
 
 export default class ReactIdSwiper extends Component {
@@ -15,10 +34,7 @@ export default class ReactIdSwiper extends Component {
     renderScrollbar: ({ scrollbar }) => <div className={cn(scrollbar.el)} />,
     renderPagination: ({ pagination }) => <div className={cn(pagination.el)} />,
     renderPrevButton: ({ navigation }) => <div className={cn(navigation.prevEl)} />,
-    renderNextButton: ({ navigation }) => <div className={cn(navigation.nextEl)} />,
-    renderParallax: ({ parallaxEl }) => (
-      <div className={cn(parallaxEl.el)} data-swiper-parallax={parallaxEl.value} />
-    )
+    renderNextButton: ({ navigation }) => <div className={cn(navigation.nextEl)} />
   };
 
   // Proptypes
@@ -38,13 +54,6 @@ export default class ReactIdSwiper extends Component {
     renderNextButton: PropTypes.func,
     renderParallax: PropTypes.func,
 
-    // parallax
-    parallax: PropTypes.bool,
-    parallaxEl: PropTypes.shape({
-      el: PropTypes.string,
-      value: PropTypes.string
-    }),
-
     // swiper parameter
     init: PropTypes.bool,
     initialSlide: PropTypes.number,
@@ -52,7 +61,6 @@ export default class ReactIdSwiper extends Component {
     rtl: PropTypes.bool,
     speed: PropTypes.number,
     setWrapperSize: PropTypes.bool,
-    virtualTranslate: PropTypes.bool,
     width: PropTypes.number,
     height: PropTypes.number,
     autoHeight: PropTypes.bool,
@@ -203,104 +211,9 @@ export default class ReactIdSwiper extends Component {
       hiddenClass: PropTypes.string
     }),
 
-    // a11y
-    a11y: PropTypes.oneOfType([
-      PropTypes.bool,
-      PropTypes.shape({
-        prevSlideMessage: PropTypes.string,
-        nextSlideMessage: PropTypes.string,
-        firstSlideMessage: PropTypes.string,
-        lastSlideMessage: PropTypes.string,
-        paginationBulletMessage: PropTypes.string,
-        notificationClass: PropTypes.string
-      })
-    ]),
-
-    // zoom
-    zoom: PropTypes.oneOfType([
-      PropTypes.bool,
-      PropTypes.shape({
-        maxRatio: PropTypes.number,
-        minRatio: PropTypes.number,
-        toggle: PropTypes.bool,
-        containerClass: PropTypes.string,
-        zoomedSlideClass: PropTypes.string
-      })
-    ]),
-
-    // keyboard
-    keyboard: PropTypes.bool,
-
-    // mousewheel
-    mousewheel: PropTypes.oneOfType([
-      PropTypes.bool,
-      PropTypes.shape({
-        forceToAxis: PropTypes.bool,
-        releaseOnEdges: PropTypes.bool,
-        invert: PropTypes.bool,
-        sensitivity: PropTypes.number,
-        eventsTarged: PropTypes.string
-      })
-    ]),
-
-    // hashNavigation
-    hashNavigation: PropTypes.oneOfType([
-      PropTypes.bool,
-      PropTypes.shape({
-        watchState: PropTypes.bool,
-        replaceState: PropTypes.bool
-      })
-    ]),
-
-    // history
-    history: PropTypes.oneOfType([
-      PropTypes.bool,
-      PropTypes.shape({
-        key: PropTypes.string,
-        replaceState: PropTypes.bool
-      })
-    ]),
-
-    // lazy
-    lazy: PropTypes.oneOfType([
-      PropTypes.bool,
-      PropTypes.shape({
-        loadPrevNext: PropTypes.bool,
-        loadPrevNextAmount: PropTypes.number,
-        loadOnTransitionStart: PropTypes.bool,
-        elementClass: PropTypes.string,
-        loadingClass: PropTypes.string,
-        loadedClass: PropTypes.string,
-        preloaderClass: PropTypes.string
-      })
-    ]),
-
     // fadeEffect
     fadeEffect: PropTypes.shape({
       crossFade: PropTypes.bool
-    }),
-
-    // coverflowEffect
-    coverflowEffect: PropTypes.shape({
-      slideShadows: PropTypes.bool,
-      rotate: PropTypes.number,
-      stretch: PropTypes.number,
-      depth: PropTypes.number,
-      modifier: PropTypes.number
-    }),
-
-    // flipEffect
-    flipEffect: PropTypes.shape({
-      slideShadows: PropTypes.bool,
-      limitRotation: PropTypes.bool
-    }),
-
-    // cubeEffect
-    cubeEffect: PropTypes.shape({
-      slideShadows: PropTypes.bool,
-      shadow: PropTypes.bool,
-      shadowOffset: PropTypes.number,
-      shadowScale: PropTypes.number
     }),
 
     // controller
@@ -348,50 +261,43 @@ export default class ReactIdSwiper extends Component {
   constructor(props) {
     super(props);
     this.renderContent = this.renderContent.bind(this);
-    this.SwiperMain = {};
   }
 
   componentDidMount() {
-    this.SwiperMain = require('swiper');
     this.buildSwiper();
   }
 
-  // shouldComponentUpdate(nextProps) {
-  //   return nextProps.children !== this.props.children;
-  // }
-
   componentDidUpdate() {
-    if (typeof this.swiper !== 'undefined') {
-      const { rebuildOnUpdate, shouldSwiperUpdate, activeSlideKey } = this.props;
+    if (typeof this.swiper === 'undefined') return;
+    const { rebuildOnUpdate, shouldSwiperUpdate, activeSlideKey } = this.props;
 
-      if (rebuildOnUpdate) {
-        this.rebuildSwiper();
-      } else if (shouldSwiperUpdate) {
-        this.updateSwiper();
+    if (rebuildOnUpdate) {
+      this.rebuildSwiper();
+    } else if (shouldSwiperUpdate) {
+      this.updateSwiper();
 
-        const numSlides = this.swiper.slides.length;
-        if (numSlides <= this.swiper.activeIndex) {
-          const index = Math.max(numSlides - 1, 0);
-          this.swiper.slideTo(index);
-        }
+      const numSlides = this.swiper.slides.length;
+      if (numSlides <= this.swiper.activeIndex) {
+        const index = Math.max(numSlides - 1, 0);
+        this.swiper.slideTo(index);
       }
+    }
 
-      if (activeSlideKey) {
-        let activeSlideId = null;
-        let id = 0;
+    if (activeSlideKey) {
+      let activeSlideId = null;
+      let id = 0;
 
-        React.Children.forEach(this.props.children, child => {
-          if (child) {
-            if (child.key === activeSlideKey) {
-              activeSlideId = id;
-            }
-            id += 1;
+      React.Children.forEach(this.props.children, child => {
+        if (child) {
+          if (child.key === activeSlideKey) {
+            activeSlideId = id;
           }
-        });
-
-        if (activeSlideId !== null) {
-          this.swiper.slideTo(activeSlideId);
+          id += 1;
         }
+      });
+
+      if (activeSlideId !== null) {
+        this.swiper.slideTo(activeSlideId);
       }
     }
   }
@@ -402,7 +308,7 @@ export default class ReactIdSwiper extends Component {
   }
 
   buildSwiper() {
-    this.swiper = this.SwiperMain(ReactDOM.findDOMNode(this), objectAssign({}, this.props));
+    this.swiper = new Swiper(ReactDOM.findDOMNode(this), objectAssign({}, this.props));
   }
 
   rebuildSwiper() {
@@ -441,15 +347,11 @@ export default class ReactIdSwiper extends Component {
       renderPagination,
       navigation,
       renderPrevButton,
-      renderNextButton,
-      parallax,
-      parallaxEl,
-      renderParallax
+      renderNextButton
     } = this.props;
 
     return (
       <ContainerEl className={containerClass} dir={rtl && 'rtl'}>
-        {parallax && parallaxEl && renderParallax(this.props)}
         <WrapperEl className={wrapperClass}>
           {React.Children.map(children, this.renderContent)}
         </WrapperEl>
